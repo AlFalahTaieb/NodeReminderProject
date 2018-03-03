@@ -3,7 +3,8 @@ const exphbs  = require('express-handlebars');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const app = express();
-
+const flash = require('connect-flash');
+const session=require('express-session');
 const methodOverride = require('method-override')
 
 //Map Global Promise 
@@ -33,6 +34,23 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 //Method OverRide
 app.use(methodOverride('_method'))
+//middlwr for express session
+app.use(session({
+  secret: 'secret',
+  resave: true,
+  saveUninitialized: true,
+  // cookie: { secure: true }
+}))
+
+app.use(flash());
+
+// Global variables
+app.use(function(req, res, next){
+  res.locals.success_msg = req.flash('success_msg');
+  res.locals.error_msg = req.flash('error_msg');
+  res.locals.error = req.flash('error');
+  next();
+});
 
 // Index Route
 app.get('/', (req, res) => {
@@ -68,11 +86,11 @@ app.get('/ideas',(req,res)=>{
 
 app.delete('/ideas/:id',(req,res)=>{
 Idea.remove({_id:req.params.id})
-.then(()=>{
-	res.redirect('/ideas');
+.then(() => {
+      req.flash('success_msg', 'Video idea removed');
+      res.redirect('/ideas');
+    });
 });
-});
-
 
 //Add Idea Form
 
@@ -91,11 +109,12 @@ Idea.findOne({
 	idea.title = req.body.title;
 	idea.details = req.body.details;
 	idea.save()
-		.then(idea=>{
-			res.redirect('/ideas');
-		})
-})
-})
+		   .then(idea => {
+        req.flash('success_msg', 'Video idea updated');
+        res.redirect('/ideas');
+      })
+  });
+});
 
 
 // Edit Idea Form
