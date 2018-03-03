@@ -4,6 +4,8 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const app = express();
 
+const methodOverride = require('method-override')
+
 //Map Global Promise 
 mongoose.Promise = global.Promise;
 
@@ -29,7 +31,8 @@ app.set('view engine', 'handlebars');
 app.use(bodyParser.urlencoded({ extended: false }))
 // parse application/json
 app.use(bodyParser.json())
-
+//Method OverRide
+app.use(methodOverride('_method'))
 
 // Index Route
 app.get('/', (req, res) => {
@@ -61,11 +64,38 @@ app.get('/ideas',(req,res)=>{
 
 
 
+//Delete Idea
+
+app.delete('/ideas/:id',(req,res)=>{
+Idea.remove({_id:req.params.id})
+.then(()=>{
+	res.redirect('/ideas');
+});
+});
+
+
 //Add Idea Form
 
 app.get('/ideas/add',(req,res)=>{
 	res.render('ideas/add');
 });
+
+//Edit Process 
+
+app.put('/ideas/:id',(req,res)=>{
+Idea.findOne({
+	_id:req.params.id
+})
+.then(idea=>{
+	//New Value
+	idea.title = req.body.title;
+	idea.details = req.body.details;
+	idea.save()
+		.then(idea=>{
+			res.redirect('/ideas');
+		})
+})
+})
 
 
 // Edit Idea Form
