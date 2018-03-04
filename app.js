@@ -1,11 +1,24 @@
 const express = require('express');
+// const path = require('path');
 const exphbs  = require('express-handlebars');
-const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
-const app = express();
+const methodOverride = require('method-override');
 const flash = require('connect-flash');
-const session=require('express-session');
-const methodOverride = require('method-override')
+const session = require('express-session');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const mongoose = require('mongoose');
+
+const app = express();
+
+// Load routes
+const ideas = require('./routes/ideas');
+const users = require('./routes/user');
+
+// Passport Config
+require('./config/passport')(passport);
+
+
+
 
 //Map Global Promise 
 mongoose.Promise = global.Promise;
@@ -15,10 +28,7 @@ mongoose.connect('mongodb://localhost/taieb-dev')
 .then(()=>console.log('MongoDb Connected ...'))
 .catch(err =>console.log(err));
 
-//Load Ideas Model
 
-require('./models/Ideas');
-const Idea = mongoose.model('ideas');
 
 
 	
@@ -41,6 +51,11 @@ app.use(session({
   saveUninitialized: true,
   // cookie: { secure: true }
 }))
+//Passport Middleware 
+  app.use(passport.initialize());
+  app.use(passport.session());
+
+
 
 app.use(flash());
 
@@ -49,6 +64,7 @@ app.use(function(req, res, next){
   res.locals.success_msg = req.flash('success_msg');
   res.locals.error_msg = req.flash('error_msg');
   res.locals.error = req.flash('error');
+  res.locals.user = req.user || null;
   next();
 });
 
@@ -68,100 +84,10 @@ app.get('/about', (req, res) => {
   });
 });
 
-//Idea Index Page
-app.get('/ideas',(req,res)=>{
-	Idea.find({})
-	.sort({date:'desc'})
-	.then(ideas=>{
-		res.render('ideas/index',{
-			ideas:ideas
-		});
-	});
 
-});
-
-
-
-//Delete Idea
-
-app.delete('/ideas/:id',(req,res)=>{
-Idea.remove({_id:req.params.id})
-.then(() => {
-      req.flash('success_msg', 'Video idea removed');
-      res.redirect('/ideas');
-    });
-});
-
-//Add Idea Form
-
-app.get('/ideas/add',(req,res)=>{
-	res.render('ideas/add');
-});
-
-//Edit Process 
-
-app.put('/ideas/:id',(req,res)=>{
-Idea.findOne({
-	_id:req.params.id
-})
-.then(idea=>{
-	//New Value
-	idea.title = req.body.title;
-	idea.details = req.body.details;
-	idea.save()
-		   .then(idea => {
-        req.flash('success_msg', 'Video idea updated');
-        res.redirect('/ideas');
-      })
-  });
-});
-
-
-// Edit Idea Form
-
-app.get('/ideas/edit/:id',(req,res)=>{
-	Idea.findOne({
-		_id:req.params.id
-	})
-	.then(idea=>{
-			res.render('ideas/edit',{
-		idea:idea
-	});
-	});
-
-});
-
-
-
-//Procss Form
-
-app.post('/ideas',(req,res)=>{
-let errors=[];
-if (!req.body.title){
-	errors.push({text:'Please Add a title'});
-}
-if (!req.body.details){
-	errors.push({text:'Please add some details'});
-}
-if(errors.length>0){
-	res.render('ideas/add',{
-	errors:errors,
-	title:req.body.title,
-	details:req.body.details
-	});
-   } else{
-   	const newUser = {
-   		title:req.body.title,
-   		details:req.body.details
-   	}
-  new Idea(newUser)
-  		.save()
-  		.then(idea=>{
-  			res.redirect('/ideas');
-  		})
-   }
-});
-
+//use Routes
+app.use('/ideas',ideas);
+app.use('/users',users);
 
 
 const port = 3000;
